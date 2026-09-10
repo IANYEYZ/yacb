@@ -1,5 +1,70 @@
 import chess
 
+mvvLva = {
+    chess.KING: {
+        chess.KING: 0,
+        chess.QUEEN: 0,
+        chess.ROOK: 0,
+        chess.BISHOP: 0,
+        chess.KNIGHT: 0,
+        chess.PAWN: 0
+    },
+    chess.QUEEN: {
+        chess.KING: 50,
+        chess.QUEEN: 51,
+        chess.ROOK: 52,
+        chess.BISHOP: 53,
+        chess.KNIGHT: 54,
+        chess.PAWN: 55
+    },
+    chess.ROOK: {
+        chess.KING: 40,
+        chess.QUEEN: 41,
+        chess.ROOK: 42,
+        chess.BISHOP: 43,
+        chess.KNIGHT: 44,
+        chess.PAWN: 45
+    },
+    chess.BISHOP: {
+        chess.KING: 30,
+        chess.QUEEN: 31,
+        chess.ROOK: 32,
+        chess.BISHOP: 33,
+        chess.KNIGHT: 34,
+        chess.PAWN: 35
+    },
+    chess.KNIGHT: {
+        chess.KING: 20,
+        chess.QUEEN: 21,
+        chess.ROOK: 22,
+        chess.BISHOP: 23,
+        chess.KNIGHT: 24,
+        chess.PAWN: 25
+    },
+    chess.PAWN: {
+        chess.KING: 10,
+        chess.QUEEN: 11,
+        chess.ROOK: 12,
+        chess.BISHOP: 13,
+        chess.KNIGHT: 14,
+        chess.PAWN: 15
+    }
+}
+
+def moveScore(board: chess.Board, move: chess.Move):
+    score = 0
+    if board.is_capture(move):
+        fr = board.piece_at(move.from_square)
+        to = board.piece_at(move.to_square)
+        if to == None and board.is_en_passant(move):
+            to = chess.Piece(chess.PAWN, chess.WHITE)
+        score += mvvLva[fr.piece_type][to.piece_type]
+    if move.promotion != None:
+        score += 50
+    if board.gives_check(move):
+        score += 10
+    return score
+
 class YACB:
     def __init__(self, color = chess.WHITE, board = chess.Board()):
         self.board = board
@@ -134,32 +199,44 @@ class YACB:
             if blocked:
                 evaluation += 20
         return evaluation
-    def minimax(self, board: chess.Board, depth):
+    def minimax(self, board: chess.Board, depth, alpha = -float("inf"), beta = float("inf")):
+        self.tot += 1
         if depth == 0 or board.is_game_over():
             return [self.evaluate(board), None]
+        moves = list(board.legal_moves)
+        moves.sort(key = lambda m: moveScore(board, m))
         if board.turn == self.color:
             best = -float("inf")
             bestMove = None
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
-                score = self.minimax(board, depth - 1)[0]
+                score = self.minimax(board, depth - 1, alpha, beta)[0]
                 board.pop()
                 if score > best:
                     best = score
                     bestMove = move
+                alpha = max(alpha, best)
+                if alpha >= beta:
+                    break
             return [best, bestMove]
         else:
             best = float("inf")
             bestMove = None
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
-                score = self.minimax(board, depth - 1)[0]
+                score = self.minimax(board, depth - 1, alpha, best)[0]
                 board.pop()
                 if score < best:
                     best = score
                     bestMove = move
+                beta = min(beta, best)
+                if alpha >= beta:
+                    break
             return [best, bestMove]
     def getNextMove(self):
-        return self.minimax(self.board, 3)[1]
+        self.tot = 0
+        mv = self.minimax(self.board, 4)[1]
+        print(self.tot)
+        return mv
     def move(self, move):
         self.board.push(move)
